@@ -38,7 +38,12 @@ public class UrlController {
     {
         try{
             UrlData _urlData =  urlService.createShortUrl(urlData);
-            return new ResponseEntity<>(_urlData, HttpStatus.CREATED);
+            if(_urlData == null){
+                return new ResponseEntity<>(null,HttpStatus.valueOf("ALREADY_EXISTS"));
+            }
+            else {
+                return new ResponseEntity<>(_urlData, HttpStatus.CREATED);
+            }
         }
         catch (Exception e){
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
