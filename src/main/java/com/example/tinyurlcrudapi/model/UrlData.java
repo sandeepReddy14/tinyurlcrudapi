@@ -6,7 +6,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.Date;
 
 @Document(collection = "urlData")
-public class URLData {
+public class UrlData {
     @Id
     private String id;
 
@@ -17,7 +17,7 @@ public class URLData {
     private Date creationDate;
     private int life;
 
-    public URLData() {
+    public UrlData() {
     }
 
     public String getId() {
@@ -78,7 +78,7 @@ public class URLData {
 
     @Override
     public String toString() {
-        return "URLData{" +
+        return "UrlData{" +
                 "id='" + id + '\'' +
                 ", longUrl='" + longUrl + '\'' +
                 ", isCustomUrl=" + isCustomUrl +

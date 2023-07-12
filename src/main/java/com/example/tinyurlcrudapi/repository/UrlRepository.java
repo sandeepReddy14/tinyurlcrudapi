@@ -1,7 +1,12 @@
 package com.example.tinyurlcrudapi.repository;
 
-import com.example.tinyurlcrudapi.model.URLData;
+import com.example.tinyurlcrudapi.model.UrlData;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface UrlRepository extends MongoRepository<URLData,String> {
+import java.util.Optional;
+
+public interface UrlRepository extends MongoRepository<UrlData,String> {
+    void deleteByShortUrl(String shortUrl);
+
+    Optional<UrlData> getUrlDataByShortUrl(String shortUrl);
 }
