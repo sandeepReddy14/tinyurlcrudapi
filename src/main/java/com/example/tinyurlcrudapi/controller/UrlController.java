@@ -2,6 +2,8 @@ package com.example.tinyurlcrudapi.controller;
 
 import com.example.tinyurlcrudapi.model.UrlData;
 import com.example.tinyurlcrudapi.service.UrlService;
+import com.example.tinyurlcrudapi.utils.ErrorCode;
+import com.example.tinyurlcrudapi.utils.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,20 +36,32 @@ public class UrlController {
     }
 
     @PostMapping("/urls")
-    public ResponseEntity<UrlData> createShortUrl(@RequestBody UrlData urlData)
+    public ResponseEntity<Response> createShortUrl(@RequestBody UrlData urlData)
     {
+        /**/
         try{
-            UrlData _urlData =  urlService.createShortUrl(urlData);
-            if(_urlData == null){
-                return new ResponseEntity<>(null,HttpStatus.valueOf("ALREADY_EXISTS"));
-            }
-            else {
-                return new ResponseEntity<>(_urlData, HttpStatus.CREATED);
+            Response _response = urlService.createShortUrl(urlData);
+            switch(_response.getErrorCode())
+            {
+                case NO_ERROR_CODE:
+                    break;
+                case GENERATED_SUCCESSFULLY:
+                    return new ResponseEntity<>(_response, HttpStatus.CREATED);
+                case CUSTOM_URL_ALREADY_EXISTS:
+                    return new ResponseEntity<>(_response,HttpStatus.CONFLICT);
+                case COLLISION_ERROR:
+                    return new ResponseEntity<>(_response,HttpStatus.CONFLICT);
+                case SERVICE_SERVER_ERROR:
+                    return new ResponseEntity<>(_response,HttpStatus.INTERNAL_SERVER_ERROR);
+                default:
+                    break;
             }
         }
         catch (Exception e){
-            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            System.out.println(e);
+            return new ResponseEntity<>(new Response(ErrorCode.SERVICE_SERVER_ERROR), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+        return null;
     }
 
     @PutMapping("/urls/{shortUrl}")

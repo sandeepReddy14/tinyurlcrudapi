@@ -1,50 +1,72 @@
 package com.example.tinyurlcrudapi.service;
 
+import com.example.tinyurlcrudapi.model.ShortUrlCounter;
 import com.example.tinyurlcrudapi.model.UrlData;
+import com.example.tinyurlcrudapi.repository.ShortUrlCounterRepository;
 import com.example.tinyurlcrudapi.repository.UrlRepository;
+import com.example.tinyurlcrudapi.utils.ErrorCode;
+import com.example.tinyurlcrudapi.utils.MD5ToBase62;
+import com.example.tinyurlcrudapi.utils.Response;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 @Service
 public class UrlService {
     @Autowired
     UrlRepository urlRepository;
-    private final char[] base62 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
+    @Autowired
+    ShortUrlCounterRepository shortUrlCounterRepository;
 
-    public UrlData createShortUrl(UrlData urlData) {
+
+
+    public Response createShortUrl(UrlData urlData) {
         if(urlData.isCustomUrl()){
             Optional<UrlData> _urlData = urlRepository.getUrlDataByShortUrl(urlData.getShortUrl());
             if(_urlData.isEmpty()){
-                return urlRepository.save(urlData);
+                Response _response = new Response(urlRepository.save(urlData), ErrorCode.GENERATED_SUCCESSFULLY);
+                return _response;
             }
             else {
-                return null;
+                Response _response = new Response(null, ErrorCode.CUSTOM_URL_ALREADY_EXISTS);
+                return _response;
             }
         }
         else{
             String longUrl = urlData.getLongUrl();
-            String md5Hex = DigestUtils.md5DigestAsHex(longUrl.getBytes()).toUpperCase();
-            urlData.setShortUrl(md5Hex);
-            Optional<UrlData> _urlData = urlRepository.getUrlDataByShortUrl(urlData.getShortUrl());
-            String randomSalt;
-            int retryCount = 10;
-            while(_urlData.isPresent() && retryCount > 0){
-                randomSalt = RandomStringUtils.randomAlphabetic(8);
-                md5Hex = DigestUtils.md5DigestAsHex(longUrl.concat(randomSalt).getBytes()).toUpperCase();
-                urlData.setShortUrl(md5Hex);
-                _urlData = urlRepository.getUrlDataByShortUrl(urlData.getShortUrl());
-                retryCount -= 1;
+            byte[] md5HexBytes = DigestUtils.md5Digest(longUrl.getBytes());
+            String shortUrlMd = MD5ToBase62.md5bytesToBase62(md5HexBytes).substring(0,9);
+            Optional<UrlData> tempUrlData = urlRepository.getUrlDataByShortUrl(shortUrlMd);
+            Optional<ShortUrlCounter> tempShortUrlCounter = shortUrlCounterRepository.getShortUrlCounterByShortUrl(shortUrlMd);
+            if(tempShortUrlCounter.isEmpty())
+            {
+                urlData.setShortUrl(shortUrlMd);
+                Response _response = new Response(urlRepository.save(urlData), ErrorCode.GENERATED_SUCCESSFULLY);
+                shortUrlCounterRepository.save(new ShortUrlCounter(shortUrlMd,1));
+                return _response;
             }
-
-            if(retryCount != 0 && _urlData.isPresent()) {
-                return null;
-            }
-            else {
-                return urlRepository.save(urlData);
+            else
+            {
+                long shortUrlCount = tempShortUrlCounter.get().getCount();
+                String _shortUrlMd = shortUrlMd + MD5ToBase62.longToBase62(shortUrlCount);
+                boolean _shortUrlMdExists = urlRepository.existsByShortUrl(_shortUrlMd);
+                if(_shortUrlMdExists)
+                {
+                    Response _response = new Response(null, ErrorCode.COLLISION_ERROR);
+                    return _response;
+                }
+                else
+                {
+                    urlData.setShortUrl(_shortUrlMd);
+                    Response _response = new Response(urlRepository.save(urlData), ErrorCode.GENERATED_SUCCESSFULLY);
+                    tempShortUrlCounter.get().setCount(shortUrlCount+1);
+                    shortUrlCounterRepository.save(tempShortUrlCounter.get());
+                    return _response;
+                }
             }
         }
 
@@ -69,6 +91,7 @@ public class UrlService {
 
     public void deleteAllUrlData() {
         urlRepository.deleteAll();
+        shortUrlCounterRepository.deleteAll();
     }
 
     public Optional<UrlData> getUrlData(String shortUrl) {

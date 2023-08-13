@@ -9,4 +9,6 @@ public interface UrlRepository extends MongoRepository<UrlData,String> {
     void deleteByShortUrl(String shortUrl);
 
     Optional<UrlData> getUrlDataByShortUrl(String shortUrl);
+    Optional<UrlData> getUrlDataByLongUrl(String longUrl);
+    boolean existsByShortUrl(String shortUrl);
 }

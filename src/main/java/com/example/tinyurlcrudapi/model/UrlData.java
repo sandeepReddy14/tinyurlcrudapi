@@ -9,10 +9,11 @@ import java.util.Date;
 public class UrlData {
     @Id
     private String id;
+    private String shortUrl;
 
     private String longUrl;
     private boolean isCustomUrl;
-    private String shortUrl;
+
     private String randomSalt;
     private Date creationDate;
     private int life;
